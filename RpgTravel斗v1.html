@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>鬥破蒼穹 · 黑角域歷練</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --bg-photo:url("BG1.JPG");
+    --sky-top:#2a1f3d;
+    --sky-mid:#5c3866;
+    --sky-horizon:#8a4d76;
+    --meadow-far:#4a3240;
+    --meadow-near:#2d1b29;
+    --path-light:#d8bd8f;
+    --path-dark:#a8875a;
+    --ink:#2a2620;
+    --parchment:#f3e6c8;
+    --parchment-dark:#d8c191;
+    --ember:#d97a3d;
+    --ember-dark:#a8551f;
+    --hp-green:#5f9e4a;
+    --hp-red:#c2453b;
+    --exp-blue:#4a7fae;
+    --shadow:rgba(20,15,5,0.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;width:100%;height:100%;overflow:hidden;
+    font-family:'Work Sans',sans-serif;color:var(--ink);
+    -webkit-user-select:none;user-select:none;touch-action:manipulation;
+  }
+  #game{
+    position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;
+    background:linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-mid) 45%, var(--sky-horizon) 62%);
+  }
+
+  /* ---------- SCENE (CSS 精靈圖定位: 3倍寬度) ---------- */
+  #scene{
+    position:absolute;inset:0;overflow:hidden;
+    background-image:var(--bg-photo);
+    background-size:300% 100%;
+    background-position:100% 58%;
+    background-repeat:no-repeat;
+    transform-origin:center 65%;
+    transition:background-position 0.5s ease-in-out;
+  }
+
+  .haze{position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to bottom, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 30%);
+    mix-blend-mode:screen; opacity:0.6;}
+
+  .vignette{position:absolute;inset:0;pointer-events:none;
+    box-shadow:inset 0 0 18vw 4vw rgba(15,20,10,0.35);}
+
+  /* ---------- HUD ---------- */
+  #hud{position:absolute;top:0;left:0;right:0;padding:10px 12px;
+    display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+    pointer-events:none; z-index:5;}
+  #minimapPanel{position:absolute; top:64px; right:10px; z-index:6;
+    width:100px; height:114px; cursor:pointer; overflow:hidden;
+    transition:width .25s ease, height .25s ease;}
+  #minimapPanel.expanded{width:220px; height:234px;}
+  #minimapTitle{font-family:'Cinzel',serif;font-weight:700;font-size:10px;text-align:center;margin-bottom:2px;}
+  #minimapSvg{width:100%; height:calc(100% - 14px); display:block;}
+  #campCtrlGroup{position:relative;}
+  #btnMusicToggle{position:absolute; bottom:100%; left:50%; transform:translateX(-50%);
+    margin-bottom:8px; z-index:20;
+    width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(180deg, var(--parchment), var(--parchment-dark));
+    border:2px solid var(--ink); box-shadow:0 3px 0 var(--shadow); font-size:16px;
+    cursor:pointer; pointer-events:auto; user-select:none;}
+  #toastMsg{position:absolute; top:54px; left:50%; z-index:19; max-width:86%;
+    background:linear-gradient(180deg, var(--parchment), var(--parchment-dark));
+    border:2px solid var(--ink); border-radius:8px; padding:8px 14px; font-size:13px;
+    box-shadow:0 3px 0 var(--shadow); text-align:center; pointer-events:none;
+    transform:translate(-50%,-8px); opacity:0; transition:opacity .25s ease, transform .25s ease;}
+  #toastMsg.show{opacity:1; transform:translate(-50%,0);}
+  .plate{background:linear-gradient(180deg, var(--parchment), var(--parchment-dark));
+    border:2px solid var(--ink); border-radius:8px; padding:6px 10px;
+    box-shadow:0 3px 0 var(--shadow); pointer-events:auto;}
+  #statPlate{min-width:150px;font-size:13px;line-height:1.5;}
+  #statPlate .name{font-family:'Cinzel',serif;font-weight:700;font-size:14px;margin-bottom:3px;}
+  .barRow{display:flex;align-items:center;gap:6px;margin-top:2px;}
+  .barLabel{width:22px;font-weight:700;font-size:11px;}
+  .barTrack{flex:1;height:9px;border:1.5px solid var(--ink);border-radius:5px;background:#00000022;overflow:hidden;}
+  .barFill{height:100%;border-radius:5px;transition:width .35s ease;}
+  #hpFill{background:linear-gradient(180deg,#8fce6f,var(--hp-green));}
+  #expFill{background:linear-gradient(180deg,#8ec3e8,var(--exp-blue));}
+
+  #distPlate{font-family:'Cinzel',serif;font-size:13px;text-align:center;}
+  #distPlate b{font-size:17px;display:block;}
+  #goldPlate{font-family:'Cinzel',serif;font-size:13px;text-align:center;color:#8a5a1c;}
+  #goldPlate b{font-size:17px;display:block;color:#a8761c;}
+
+  /* ---------- DO3.PNG CSS 精靈角色圖集定位 (7欄 x 3列) ---------- */
+  .character-sprite {
+    width: 100px;
+    height: 120px;
+    margin: 0 auto;
+    background-image: url('DO3.PNG');
+    background-size: 700% 300%;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0 6px 4px rgba(0,0,0,0.35));
+  }
+
+  /* 精靈位置 網格對應: X(0%~100%), Y(0%~100%) */
+  .sprite-0-0 { background-position: 0% 0%; }
+  .sprite-1-0 { background-position: 16.666% 0%; }
+  .sprite-2-0 { background-position: 33.333% 0%; }
+  .sprite-3-0 { background-position: 50% 0%; }
+  .sprite-4-0 { background-position: 66.666% 0%; }
+  .sprite-5-0 { background-position: 83.333% 0%; }
+  .sprite-6-0 { background-position: 100% 0%; }
+
+  .sprite-0-1 { background-position: 0% 50%; }
+  .sprite-1-1 { background-position: 16.666% 50%; }
+  .sprite-2-1 { background-position: 33.333% 50%; }
+  .sprite-3-1 { background-position: 50% 50%; }
+  .sprite-4-1 { background-position: 66.666% 50%; }
+  .sprite-5-1 { background-position: 83.333% 50%; }
+  .sprite-6-1 { background-position: 100% 50%; }
+
+  .sprite-0-2 { background-position: 0% 100%; }
+  .sprite-1-2 { background-position: 16.666% 100%; }
+  .sprite-2-2 { background-position: 33.333% 100%; }
+  .sprite-3-2 { background-position: 50% 100%; }
+  .sprite-4-2 { background-position: 66.666% 100%; }
+  .sprite-5-2 { background-position: 83.333% 100%; }
+  .sprite-6-2 { background-position: 100% 100%; }
+
+  /* 裝備與屬性標籤 */
+  .equipLine{font-size:10px;color:#5a4432;margin-top:2px;}
+  .rarity-common{color:#5a5a5a;}
+  .rarity-rare{color:#2b6fb0;}
+  .rarity-epic{color:#7a3fb0;}
+  .rarity-legendary{color:#b0801f; text-shadow:0 0 4px rgba(255,200,60,0.6);}
+  .rarityTag{font-size:10px; border-radius:5px; padding:1px 5px; border:1px solid currentColor; margin-left:4px;}
+
+  .elemBadge{display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; border-radius:50%; font-size:10px; font-weight:700; color:#fff; margin-left:4px; text-shadow:0 1px 1px rgba(0,0,0,0.4); vertical-align:middle; box-shadow:0 0 3px rgba(0,0,0,0.35);}
+  .elemBadge.elem-metal{background:linear-gradient(160deg,#e9d98a,#b8974a);}
+  .elemBadge.elem-wood{background:linear-gradient(160deg,#7bc36a,#3f7d34);}
+  .elemBadge.elem-water{background:linear-gradient(160deg,#6fb8e6,#2568a8);}
+  .elemBadge.elem-fire{background:linear-gradient(160deg,#f28a5c,#c73a24);}
+  .elemBadge.elem-earth{background:linear-gradient(160deg,#c8a06a,#8a6431);}
+  #pName .elemBadge{transform:scale(1.05);}
+
+  #campOverlay .panel{max-width:520px; text-align:left; max-height:88vh; overflow-y:auto;}
+  #campBanner{
+    width:100%; height:120px; border-radius:10px; border:2px solid var(--ink); margin-bottom:10px; display:block;
+    background-image:var(--bg-photo); background-size:300% 100%; background-position:0% 58%; background-repeat:no-repeat;
+  }
+  
+  .campTabs{display:flex; gap:6px; margin-bottom:10px;}
+  .campTab{flex:1; text-align:center; font-family:'Cinzel',serif; font-weight:700; font-size:13px;
+    padding:8px 4px; border-radius:8px 8px 0 0; border:2px solid var(--ink); border-bottom:none;
+    background:var(--parchment-dark); cursor:pointer; opacity:0.6;}
+  .campTab.active{opacity:1; background:var(--parchment);}
+  .campPane{display:none;}
+  .campPane.active{display:block;}
+  .itemList{display:flex; flex-direction:column; gap:8px; max-height:46vh; overflow-y:auto; padding-right:2px;}
+  .itemCard{display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background:#ffffff55; border:1.5px solid var(--ink); border-radius:8px; padding:7px 9px;}
+  .itemInfo{font-size:12px; line-height:1.4;}
+  .itemInfo .iname{font-weight:700; font-size:13px;}
+  .itemActions{display:flex; gap:5px; flex-shrink:0;}
+  .miniBtn{font-family:'Work Sans',sans-serif; font-weight:600; font-size:11px; color:var(--parchment);
+    background:linear-gradient(180deg, var(--ember), var(--ember-dark)); border:1.5px solid var(--ink);
+    border-radius:6px; padding:6px 8px; cursor:pointer; white-space:nowrap;}
+  .miniBtn.sell{background:linear-gradient(180deg,#c2453b,#8f2d26);}
+  .miniBtn.unequip{background:linear-gradient(180deg,#6d7f8f,#3f4d59);}
+  .miniBtn:disabled{opacity:0.4; cursor:not-allowed;}
+  .equipSlots{display:flex; gap:8px; margin-bottom:10px;}
+  .equipSlot{flex:1; text-align:center; font-size:11px; background:#ffffff55; border:1.5px dashed var(--ink);
+    border-radius:8px; padding:7px 4px;}
+  .equipSlot .slotName{font-weight:700; display:block; margin-bottom:2px;}
+  .emptyHint{font-size:12px; opacity:0.7; text-align:center; padding:10px;}
+  .itemCard.selectable{cursor:pointer;}
+  .itemCard.selected{border-color:var(--ember); background:#ffe9c9aa; box-shadow:0 0 0 2px var(--ember) inset;}
+  .refineTypeBtns{display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;}
+  .refineTypeBtn{flex:1; min-width:60px; text-align:center; font-size:12px; font-weight:700; padding:6px 4px;
+    border:1.5px solid var(--ink); border-radius:6px; background:var(--parchment-dark); cursor:pointer; opacity:0.65;}
+  .refineTypeBtn.active{opacity:1; background:var(--parchment); box-shadow:0 0 0 2px var(--ember) inset;}
+  .refineSummary{font-size:12px; background:#ffffff66; border:1.5px dashed var(--ink); border-radius:8px; padding:8px; margin-bottom:10px;}
+  .saveRow{display:flex; gap:8px; margin-top:12px;}
+  .saveRow .btn{flex:1; font-size:12px; padding:9px 6px;}
+  #importFileInput{display:none;}
+
+  #dropBox{margin:8px 0 14px; padding:8px; border:1.5px dashed var(--ink); border-radius:8px;
+    background:#ffffff55; font-size:13px; display:none;}
+  #dropBox.show{display:block;}
+
+  /* ---------- CONTROLS ---------- */
+  #controls{position:absolute;bottom:0;left:0;right:0;
+    display:flex;justify-content:space-between;align-items:flex-end;
+    padding:14px;gap:10px;z-index:5;}
+  .ctrlGroup{display:flex;gap:8px;}
+  .btn{
+    font-family:'Cinzel',serif;font-weight:600;font-size:13px;color:var(--parchment);
+    background:linear-gradient(180deg, var(--ember), var(--ember-dark));
+    border:2px solid var(--ink); border-radius:10px;
+    padding:12px 14px; box-shadow:0 4px 0 var(--shadow);
+    cursor:pointer; min-width:56px; text-align:center;
+    transition:transform .06s ease, box-shadow .06s ease;
+  }
+  .btn:active{transform:translateY(3px); box-shadow:0 1px 0 var(--shadow);}
+  .btn.big{min-width:96px;font-size:15px;}
+  .btn.ghost{background:linear-gradient(180deg,#6d7f8f,#3f4d59);}
+
+  /* ---------- OVERLAYS ---------- */
+  .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(10,10,10,0.55); z-index:20; padding:16px;}
+  .hidden{display:none !important;}
+  .panel{
+    background:linear-gradient(180deg, var(--parchment), var(--parchment-dark));
+    border:3px solid var(--ink); border-radius:16px;
+    padding:22px 24px; max-width:440px; width:100%;
+    box-shadow:0 10px 0 var(--shadow); text-align:center;
+  }
+  .panel h1{font-family:'Cinzel',serif;font-size:26px;margin:0 0 8px;color:var(--ember-dark);}
+  .panel h2{font-family:'Cinzel',serif;font-size:20px;margin:0 0 10px;}
+  .panel p{font-size:14px;line-height:1.6;margin:6px 0 16px;}
+
+  /* battle */
+  #battleOverlay .panel{max-width:480px;}
+  #battleStage{display:flex;justify-content:space-around;align-items:flex-end;margin-bottom:12px;}
+  .fighter{width:44%;}
+  .fighter .fname{font-family:'Cinzel',serif;font-weight:700;font-size:13px;margin-top:4px;}
+  .fighter .barTrack{height:10px;}
+  #battleLog{min-height:38px;font-size:13px;background:#00000012;border-radius:8px;padding:8px;margin-bottom:12px;}
+  .battleBtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+  .battleBtns .btn{flex:1;min-width:80px;}
+
+  .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:15;}
+
+  @media (max-width:480px){
+    .btn{padding:10px 11px;font-size:12px;min-width:48px;}
+    .btn.big{min-width:78px;font-size:13px;}
+    #statPlate{font-size:11px;}
+    .panel{padding:16px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="game">
+  <div id="scene"><div class="haze"></div></div>
+  <div class="vignette"></div>
+  <div class="flash" id="flash"></div>
+  <div id="toastMsg"></div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="plate" id="statPlate">
+      <div class="name" id="pName">蕭炎<span id="pElemBadges"></span></div>
+      <div>段位 Lv <span id="pLevel">1</span></div>
+      <div class="barRow"><span class="barLabel">HP</span>
+        <div class="barTrack"><div class="barFill" id="hpFill" style="width:100%"></div></div>
+      </div>
+      <div class="barRow"><span class="barLabel">斗氣</span>
+        <div class="barTrack"><div class="barFill" id="mpFill" style="width:100%;background:linear-gradient(180deg,#7ec8e3,#2f7fa8);"></div></div>
+      </div>
+      <div class="barRow"><span class="barLabel">EXP</span>
+        <div class="barTrack"><div class="barFill" id="expFill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="plate" id="distPlate"><b id="distVal">0</b> 步</div>
+    <div class="plate" id="stagePlate">第 <b id="stageVal">0</b> 區域</div>
+    <div class="plate" id="goldPlate"><b id="goldVal">0</b> 金幣</div>
+  </div>
+
+  <div class="plate" id="minimapPanel" title="點擊放大/縮小地圖">
+    <div id="minimapTitle">🗺️ 黑角域地圖</div>
+    <svg id="minimapSvg" viewBox="0 0 120 120"></svg>
+  </div>
+
+  <!-- Controls -->
+  <div id="controls">
+    <div class="ctrlGroup">
+      <div class="btn" id="btnLeft">◀ 轉向</div>
+      <div class="btn" id="btnRight">轉向 ▶</div>
+    </div>
+    <div class="btn big" id="btnForward">前進</div>
+    <div class="ctrlGroup" id="campCtrlGroup">
+      <div id="btnMusicToggle" title="開關背景音樂">🔈</div>
+      <div class="btn ghost" id="btnCamp">⛺ 迦南學院</div>
+    </div>
+  </div>
+
+  <!-- Title overlay -->
+  <div class="overlay" id="titleOverlay">
+    <div class="panel">
+      <h1>鬥破蒼穹</h1>
+      <p>少年蕭炎隻身踏入混亂無序的黑角域，目標前往迦南學院！<br>
+         沿著危機四伏的小徑一路向前，途中會遇見各方勢力的強者、強悍魔獸與黑市商人。<br>
+         按「前進」踏上歷練之旅，遭遇戰鬥時選擇你的鬥技與戰術。<br>
+         鍵盤玩家可用 ← → 轉向、↑ 或空白鍵前進。</p>
+      <div class="btn big" id="btnStart">踏入黑角域</div>
+      <div class="saveRow">
+        <div class="btn" id="btnExportTitle">💾 匯出存檔</div>
+        <div class="btn" id="btnImportTitle">📂 匯入存檔</div>
+      </div>
+      <div class="saveRow">
+        <div class="btn" id="btnDriveExportTitle">☁️ 匯出到雲端硬碟</div>
+        <div class="btn" id="btnDriveImportTitle">☁️ 從雲端硬碟匯入</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Battle overlay -->
+  <div class="overlay hidden" id="battleOverlay">
+    <div class="panel">
+      <h2 id="battleTitle">遭遇強敵！</h2>
+      <div id="battleStage">
+        <div class="fighter" id="playerFighter">
+          <!-- 玩家主角（蕭炎）：第1排第1位 -->
+          <div id="playerSprite" class="character-sprite sprite-0-0"></div>
+          <div class="fname">蕭炎</div>
+          <div class="barTrack"><div class="barFill" id="battleHpFillP" style="width:100%;background:linear-gradient(180deg,#8fce6f,var(--hp-green));"></div></div>
+          <div class="barTrack" style="margin-top:3px;height:5px;"><div class="barFill" id="battleMpFillP" style="width:100%;background:linear-gradient(180deg,#7ec8e3,#2f7fa8);"></div></div>
+        </div>
+        <div class="fighter" id="enemyFighter">
+          <!-- 敵人角色（經由 JS 動態切換 Class 渲染精靈圖） -->
+          <div id="enemySprite" class="character-sprite"></div>
+          <div class="fname" id="enemyName">？？？</div>
+          <div class="barTrack"><div class="barFill" id="battleHpFillE" style="width:100%;background:linear-gradient(180deg,#e28a7a,var(--hp-red));"></div></div>
+        </div>
+      </div>
+      <div id="battleLog">一個強敵擋住了去路！</div>
+      <div class="battleBtns" id="battleBtnsMain">
+        <div class="btn" id="btnAttack">近身攻擊</div>
+        <div class="btn" id="btnSkill">鬥技</div>
+        <div class="btn" id="btnDefend">斗氣化鎧</div>
+        <div class="btn ghost" id="btnFlee">撤退</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result overlay -->
+  <div class="overlay hidden" id="resultOverlay">
+    <div class="panel">
+      <h2 id="resultTitle">結果</h2>
+      <p id="resultText"></p>
+      <div id="dropBox"></div>
+      <div class="btn big" id="btnContinue">繼續歷練</div>
+    </div>
+  </div>
+
+  <!-- Camp overlay -->
+  <div class="overlay hidden" id="campOverlay">
+    <div class="panel">
+      <div id="campBanner"></div>
+      <h2 style="margin-top:0;">迦南學院 · 迦南交易坊</h2>
+      <div class="campTabs">
+        <div class="campTab active" data-tab="shop">黑市坊市</div>
+        <div class="campTab" data-tab="bag">納戒</div>
+        <div class="campTab" data-tab="equip">裝備</div>
+        <div class="campTab" data-tab="enhance">強化</div>
+        <div class="campTab" data-tab="refine">煉製</div>
+        <div class="campTab" data-tab="cartography">繪圖</div>
+        <div class="campTab" data-tab="achieve">成就</div>
+        <div class="campTab" data-tab="save">存讀檔</div>
+      </div>
+
+      <div class="campPane active" id="paneShop"><div class="itemList" id="shopList"></div></div>
+      <div class="campPane" id="paneBag"><div class="itemList" id="bagList"></div></div>
+      <div class="campPane" id="paneEquip">
+        <div class="equipSlots">
+          <div class="equipSlot" id="slotWeapon"><span class="slotName">武器</span>（空）</div>
+          <div class="equipSlot" id="slotArmor"><span class="slotName">護甲</span>（空）</div>
+          <div class="equipSlot" id="slotAccessory"><span class="slotName">飾品</span>（空）</div>
+          <div class="equipSlot" id="slotCompanion"><span class="slotName">傀儡/魔寵</span>（空）</div>
+        </div>
+      </div>
+      <div class="campPane" id="paneEnhance"><div class="itemList" id="enhanceList"></div></div>
+      <div class="campPane" id="paneRefine">
+        <div class="refineTypeBtns" id="refineTypeBtns"></div>
+        <div class="itemList" id="refineMaterialList" style="max-height:28vh;"></div>
+        <div class="refineSummary" id="refineSummary"></div>
+        <div class="btn" id="btnDoRefine" style="text-align:center;">🔥 開鼎煉製</div>
+      </div>
+      <div class="campPane" id="paneCartography">
+        <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+          <div style="width:120px; height:120px; flex-shrink:0; background:#f3e6c9; border:2px solid var(--ink); border-radius:8px; padding:4px;">
+            <svg id="cartographyPreviewSvg" viewBox="0 0 120 120" style="width:100%;height:100%;display:block;"></svg>
+          </div>
+          <div style="flex:1; min-width:150px; font-size:12px;">
+            <div id="cartographyStats" style="margin-bottom:8px;"></div>
+            <div class="btn" id="btnSellMap" style="text-align:center;">🗺️ 繪製並賣出地圖</div>
+          </div>
+        </div>
+      </div>
+      <div class="campPane" id="paneAchieve"><div class="itemList" id="achieveList"></div></div>
+      <div class="campPane" id="paneSave">
+        <p style="font-size:12px;margin:0 0 8px;">將目前進度匯出成 JSON 檔案保存在本機，或匯入先前的存檔。</p>
+        <div class="saveRow">
+          <div class="btn" id="btnExportCamp">💾 匯出存檔</div>
+          <div class="btn" id="btnImportCamp">📂 匯入存檔</div>
+        </div>
+        <p style="font-size:12px;margin:10px 0 8px;">也可以直接同步到你的 Google 雲端硬碟，方便跨裝置遊玩。</p>
+        <div class="saveRow">
+          <div class="btn" id="btnDriveExportCamp">☁️ 匯出到雲端硬碟</div>
+          <div class="btn" id="btnDriveImportCamp">☁️ 從雲端硬碟匯入</div>
+        </div>
+      </div>
+      <div class="btn big" id="btnLeaveCamp" style="margin-top:14px;">離開迦南學院</div>
+    </div>
+  </div>
+
+  <!-- Game over overlay -->
+  <div class="overlay hidden" id="gameOverOverlay">
+    <div class="panel">
+      <h1>歷練挫敗…</h1>
+      <p id="gameOverText">你重傷倒地，但蕭家人的鬥志永不熄滅！</p>
+      <div class="btn big" id="btnRestart">重整旗鼓</div>
+    </div>
+  </div>
+
+  <input type="file" id="importFileInput" accept="application/json">
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  let bgSceneIndex = 0; 
+  const bgPositions = ["100% 58%", "50% 58%", "0% 58%"];
+  const bgNames = ["黑角域", "焚天塔", "迦南學院"];
+
+  function updateSceneBg() {
+    const scene = document.getElementById("scene");
+    const btnForward = document.getElementById("btnForward");
+    if(scene) {
+      scene.style.backgroundPosition = bgPositions[bgSceneIndex];
+      showToast(`📍 當前區域：${bgNames[bgSceneIndex]}`, 2000);
+      if (bgSceneIndex === 2) {
+        if(btnForward) btnForward.style.display = "none";
+        setTimeout(() => { openCamp(); }, 300);
+      } else {
+        if(btnForward) btnForward.style.display = "";
+      }
+    }
+  }
+
+  let touchStartX = 0, touchEndX = 0;
+  const gameEl = document.getElementById("game");
+
+  function handleSwipe() {
+    const swipeDistance = touchEndX - touchStartX;
+    if (Math.abs(swipeDistance) > 50) {
+      if (swipeDistance < 0) {
+        if (bgSceneIndex < bgPositions.length - 1) { bgSceneIndex++; updateSceneBg(); }
+      } else {
+        if (bgSceneIndex > 0) { bgSceneIndex--; updateSceneBg(); }
+      }
+    }
+  }
+
+  gameEl.addEventListener("touchstart", e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
+  gameEl.addEventListener("touchend", e => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); }, {passive: true});
+  gameEl.addEventListener("mousedown", e => { touchStartX = e.clientX; });
+  gameEl.addEventListener("mouseup", e => { touchEndX = e.clientX; handleSwipe(); });
+
+  const state = {
+    started:false, distance:0, level:1, exp:0, expToNext:20,
+    hp:30, baseMaxHp:30, maxHp:30, mp:20, baseMaxMp:20, maxMp:20,
+    baseAtk:6, baseDef:2, atk:6, def:2, gold:20,
+    inventory:[], equip:{weapon:null, armor:null, accessory:null, companion:null},
+    refineType:"weapon", refineSelected:[], inBattle:false, encounterCooldown:2,
+    stage:0, maxMonsterTier:1, winStreak:0, kills:0, totalGoldEarned:0,
+    achievementsUnlocked:[], lastBossStage:0, pendingBoss:false,
+    mapX:0, mapY:0, mapHeading:0, mapPath:[{x:0,y:0}], mapMarkers:[],
+    lastMapDrawPathLen:1, lastMapDrawMarkerIdx:0,
+  };
+
+  /* ---------- DO3.PNG 精靈角色對應 (20位遭遇角色) ---------- */
+  const MONSTER_ROSTER = [
+    {name:"藥老靈體",       spriteClass:"sprite-1-0", minDist:0,  element:"water"},
+    {name:"小醫仙",         spriteClass:"sprite-2-0", minDist:2,  element:"wood"},
+    {name:"美杜莎女王",     spriteClass:"sprite-3-0", minDist:4,  element:"fire"},
+    {name:"紫研（太虛古龍）", spriteClass:"sprite-4-0", minDist:6,  element:"earth"},
+    {name:"林修崖",         spriteClass:"sprite-5-0", minDist:8,  element:"metal"},
+    {name:"柳擎",           spriteClass:"sprite-6-0", minDist:10, element:"metal"},
+    {name:"黑角域傭兵",     spriteClass:"sprite-0-1", minDist:12, element:"water"},
+    {name:"黑角域狂戰士",   spriteClass:"sprite-1-1", minDist:14, element:"fire"},
+    {name:"血宗大長老",     spriteClass:"sprite-2-1", minDist:16, element:"fire"},
+    {name:"岩石巨人傀儡",   spriteClass:"sprite-3-1", minDist:18, element:"earth"},
+    {name:"迦南執法隊長",   spriteClass:"sprite-4-1", minDist:20, element:"wood"},
+    {name:"小毒仙",         spriteClass:"sprite-5-1", minDist:22, element:"wood"},
+    {name:"黑角黑市商人",   spriteClass:"sprite-6-1", minDist:24, element:"metal"},
+    {name:"藥皇韓楓",       spriteClass:"sprite-0-2", minDist:26, element:"fire"},
+    {name:"冰皇海波東",     spriteClass:"sprite-1-2", minDist:28, element:"water"},
+    {name:"血宗宗主范勞",   spriteClass:"sprite-2-2", minDist:30, element:"fire"},
+    {name:"陰陽雙老（金）", spriteClass:"sprite-3-2", minDist:32, element:"metal"},
+    {name:"陰陽雙老（銀）", spriteClass:"sprite-4-2", minDist:34, element:"earth"},
+    {name:"迦南學院大長老", spriteClass:"sprite-5-2", minDist:38, element:"wood"},
+    {name:"黑角域老牌鬥皇", spriteClass:"sprite-6-2", minDist:42, element:"earth"},
+  ];
+
+  const MONSTER_TABLE = MONSTER_ROSTER.map((m, i)=>{
+    const t = i+1;
+    return Object.assign({}, m, {
+      tier: t,
+      hp:  10 + t*4,
+      atk: 3 + Math.round(t*1.1),
+      def: Math.round(t*0.5),
+      exp: 6 + t*3,
+    });
+  });
+
+  const STEPS_PER_STAGE = 20;
+  const STAGE_FOR_STRONG_MONSTERS = 5;
+
+  const ELEMENTS = {
+    metal: {cn:"金", cls:"elem-metal"}, wood:  {cn:"木", cls:"elem-wood"},
+    water: {cn:"水", cls:"elem-water"}, fire:  {cn:"火", cls:"elem-fire"},
+    earth: {cn:"土", cls:"elem-earth"},
+  };
+  const ELEMENT_KEYS = Object.keys(ELEMENTS);
+
+  function elementBadgeHTML(key){
+    if(!key || !ELEMENTS[key]) return "";
+    const e = ELEMENTS[key];
+    return `<span class="elemBadge ${e.cls}" title="斗氣屬性：${e.cn}">${e.cn}</span>`;
+  }
+  function randomElement(){ return ELEMENT_KEYS[Math.floor(Math.random()*ELEMENT_KEYS.length)]; }
+
+  const RARITY = {
+    common:    {label:"黃階", mult:1.0,  priceMult:1.0,  weight:52, cls:"rarity-common"},
+    rare:      {label:"玄階", mult:1.6,  priceMult:2.4,  weight:30, cls:"rarity-rare"},
+    epic:      {label:"地階", mult:2.4,  priceMult:5.0,  weight:14, cls:"rarity-epic"},
+    legendary: {label:"天階", mult:3.5,  priceMult:11.0, weight:4,  cls:"rarity-legendary"},
+  };
+  const RARITY_ORDER = ["common","rare","epic","legendary"];
+
+  const ITEM_TYPES = {
+    weapon:    {label:"武器", stat:"atk", names:["精鐵短劍","烏鋼長槍","黑角彎刀","赤血魔劍","玄重尺","風雷雙刃","霸王槍","骨尺","寒冰刺"]},
+    armor:     {label:"護甲", stat:"def", names:["麻布鬥袍","獸皮軟甲","玄鐵內鎧","紫雲翼軟甲","迦南執法長袍","地心毒蟒甲"]},
+    accessory: {label:"飾品", stat:"hp",  names:["護身木符","冰心玉佩","納戒","火靈珠","熾焰佩","古玉殘片"]},
+    companion: {label:"傀儡/魔寵", stat:"atk", names:["一階小魔狼","二階風雷鷹","三階赤冰蛇","四階雙頭火靈蛇","地妖傀","天妖傀"]},
+  };
+  const RARITY_PREFIX = {common:"", rare:"優質的", epic:"極品的", legendary:"絕世的"};
+
+  let itemUID = 1;
+
+  function rollRarity(tier){
+    const bonus = Math.min(20, tier*0.6);
+    const weights = RARITY_ORDER.map(r=>{
+      let w = RARITY[r].weight;
+      if(r!=="common") w += bonus*(RARITY[r].weight/60);
+      return w;
+    });
+    const total = weights.reduce((a,b)=>a+b,0);
+    let roll = Math.random()*total;
+    for(let i=0;i<RARITY_ORDER.length;i++){
+      if(roll < weights[i]) return RARITY_ORDER[i];
+      roll -= weights[i];
+    }
+    return "common";
+  }
+
+  function createItem(type, rarity, tier){
+    const def = ITEM_TYPES[type];
+    const rdef = RARITY[rarity];
+    const baseName = def.names[Math.min(def.names.length-1, Math.floor(tier/6))] || def.names[0];
+    const name = (RARITY_PREFIX[rarity] || "") + baseName;
+    let baseVal;
+    if(def.stat==="hp") baseVal = 6 + tier*1.6;
+    else baseVal = 2 + tier*0.55;
+    if(type==="companion") baseVal *= 0.5;
+    const value = Math.max(1, Math.round(baseVal * rdef.mult));
+    const price = Math.max(4, Math.round(value * (def.stat==="hp"? 2.2 : 5.5) * rdef.priceMult));
+    return {
+      uid: "it"+(itemUID++),
+      type, rarity, name, stat: def.stat, value, price, element: randomElement(),
+    };
+  }
+
+  function generateDrop(tier){
+    const types = Object.keys(ITEM_TYPES);
+    const type = types[Math.floor(Math.random()*types.length)];
+    const rarity = rollRarity(tier);
+    return createItem(type, rarity, tier);
+  }
+
+  function statLabel(stat){
+    return stat==="atk" ? "攻擊力" : stat==="def" ? "防禦力" : "最大生命";
+  }
+
+  function itemDescHTML(item, withRarityTag){
+    const rdef = RARITY[item.rarity];
+    const tag = withRarityTag!==false ? `<span class="rarityTag ${rdef.cls}">${rdef.label}</span>` : "";
+    const elem = elementBadgeHTML(item.element);
+    return `<span class="iname ${rdef.cls}">${item.name}</span>${tag}${elem}<br>${ITEM_TYPES[item.type].label} · ${statLabel(item.stat)} +${item.value}`;
+  }
+
+  const ACHIEVEMENTS = [
+    {id:"kill10",  name:"初歷黑角",   desc:"累計擊敗 10 個強敵/魔獸", check:s=>s.kills>=10, reward:{atk:1}},
+    {id:"kill50",  name:"黑市煞星",   desc:"累計擊敗 50 個強敵/魔獸", check:s=>s.kills>=50, reward:{atk:2, def:1}},
+    {id:"kill150", name:"鬥皇之姿",   desc:"累計擊敗 150 個強敵/魔獸",check:s=>s.kills>=150, reward:{atk:4, def:2}},
+  ];
+
+  function checkAchievements(){
+    let unlockedNew = false;
+    ACHIEVEMENTS.forEach(a=>{
+      if(state.achievementsUnlocked.includes(a.id)) return;
+      if(!a.check(state)) return;
+      state.achievementsUnlocked.push(a.id);
+      if(a.reward.atk) state.baseAtk += a.reward.atk;
+      if(a.reward.def) state.baseDef += a.reward.def;
+      if(a.reward.maxHp) state.baseMaxHp += a.reward.maxHp;
+      unlockedNew = true;
+      showToast(`🏆 達成成就「${a.name}」！${a.desc}`, 3600);
+    });
+    if(unlockedNew) recomputeStats();
+    return unlockedNew;
+  }
+
+  function renderAchievements(){
+    const el = $("achieveList");
+    if(!el) return;
+    el.innerHTML = "";
+    ACHIEVEMENTS.forEach(a=>{
+      const done = state.achievementsUnlocked.includes(a.id);
+      const card = document.createElement("div");
+      card.className = "itemCard";
+      const rewardText = Object.entries(a.reward).map(([k,v])=>{
+        const label = k==="atk"?"攻擊":k==="def"?"防禦":"生命上限";
+        return `+${v} ${label}`;
+      }).join("、");
+      card.innerHTML = `<div class="itemInfo"><span class="iname" style="${done?'':'opacity:0.5;'}">${done?"✅":"⬜"} ${a.name}</span><br>${a.desc}｜獎勵：${rewardText}</div>`;
+      el.appendChild(card);
+    });
+  }
+
+  function playerElement(){ return state.equip.weapon ? state.equip.weapon.element : "fire"; }
+  function playerDefenseElement(){ return state.equip.armor ? state.equip.armor.element : null; }
+
+  function recomputeStats(){
+    let bonusAtk=0, bonusDef=0, bonusHp=0;
+    ["weapon","armor","accessory","companion"].forEach(slot=>{
+      const it = state.equip[slot];
+      if(!it) return;
+      if(it.stat==="atk") bonusAtk += it.value;
+      else if(it.stat==="def") bonusDef += it.value;
+      else if(it.stat==="hp") bonusHp += it.value;
+    });
+    state.atk = state.baseAtk + bonusAtk;
+    state.def = state.baseDef + bonusDef;
+    const newMax = state.baseMaxHp + bonusHp;
+    if(newMax > state.maxHp) state.hp += (newMax - state.maxHp);
+    state.maxHp = newMax;
+    if(state.hp > state.maxHp) state.hp = state.maxHp;
+    updateHUD();
+  }
+
+  function addItemToInventory(item){ state.inventory.push(item); }
+
+  function equipItem(uid){
+    const idx = state.inventory.findIndex(i=>i.uid===uid);
+    if(idx<0) return;
+    const item = state.inventory[idx];
+    const prev = state.equip[item.type];
+    state.inventory.splice(idx,1);
+    if(prev) state.inventory.push(prev);
+    state.equip[item.type] = item;
+    recomputeStats();
+    renderBag(); renderEquip(); renderShop(); renderEnhance(); renderRefine();
+  }
+
+  function unequipItem(slot){
+    const item = state.equip[slot];
+    if(!item) return;
+    state.equip[slot] = null;
+    state.inventory.push(item);
+    recomputeStats();
+    renderBag(); renderEquip(); renderEnhance(); renderRefine();
+  }
+
+  function enhanceCost(item){ return Math.round(12 + (item.enhanceLevel||0)*10 + item.price*0.25); }
+
+  function enhanceItem(uid){
+    const slot = Object.keys(state.equip).find(s=>state.equip[s] && state.equip[s].uid===uid);
+    if(!slot) return;
+    const item = state.equip[slot];
+    const cost = enhanceCost(item);
+    if(state.gold < cost) return;
+    state.gold -= cost;
+    item.enhanceLevel = (item.enhanceLevel||0) + 1;
+    const step = item.stat==="hp" ? Math.max(1, Math.round(item.value*0.08)) : Math.max(1, Math.round(item.value*0.12));
+    item.value += step;
+    recomputeStats();
+    updateHUD();
+    renderEquip(); renderEnhance();
+  }
+
+  function renderEnhance(){
+    const el = $("enhanceList");
+    if(!el) return;
+    el.innerHTML = "";
+    const slots = ["weapon","armor","accessory","companion"];
+    const equipped = slots.map(s=>state.equip[s]).filter(it=>it);
+    if(equipped.length===0){
+      el.innerHTML = `<div class="emptyHint">尚未裝備任何物品！</div>`;
+      return;
+    }
+    equipped.forEach(item=>{
+      const cost = enhanceCost(item);
+      const affordable = state.gold >= cost;
+      const lvl = item.enhanceLevel || 0;
+      const card = document.createElement("div");
+      card.className = "itemCard";
+      card.innerHTML = `<div class="itemInfo">${itemDescHTML(item)}${lvl>0?` <span class="rarityTag">+${lvl}</span>`:""}</div>
+        <div class="itemActions"><button class="miniBtn" ${affordable?"":"disabled"} data-enhance="${item.uid}">溫養強化(${cost}幣)</button></div>`;
+      el.appendChild(card);
+    });
+    el.querySelectorAll("[data-enhance]").forEach(btn=>{
+      btn.addEventListener("click", ()=>enhanceItem(btn.getAttribute("data-enhance")));
+    });
+  }
+
+  const REFINE_MATERIAL_COUNT = 3;
+
+  function rollRefineRarity(materials){
+    const idxs = materials.map(it=>RARITY_ORDER.indexOf(it.rarity));
+    const minIdx = Math.min(...idxs);
+    const avgIdx = idxs.reduce((a,b)=>a+b,0)/idxs.length;
+    let resultIdx = minIdx;
+    if(resultIdx < RARITY_ORDER.length-1 && Math.random() < (0.20 + Math.max(0, avgIdx-minIdx)*0.25)) resultIdx++;
+    return RARITY_ORDER[resultIdx];
+  }
+
+  function getRefineMaterials(){
+    return state.refineSelected.map(uid=>state.inventory.find(it=>it.uid===uid)).filter(it=>it);
+  }
+
+  function setRefineType(type){ state.refineType = type; renderRefine(); }
+
+  function toggleRefineMaterial(uid){
+    const idx = state.refineSelected.indexOf(uid);
+    if(idx>=0){ state.refineSelected.splice(idx,1); }
+    else { if(state.refineSelected.length < REFINE_MATERIAL_COUNT) state.refineSelected.push(uid); }
+    renderRefine();
+  }
+
+  function doRefine(){
+    const materials = getRefineMaterials();
+    if(materials.length !== REFINE_MATERIAL_COUNT) return;
+    const cost = Math.max(10, Math.round(materials.reduce((s,it)=>s+it.price,0)*0.15));
+    if(state.gold < cost) return;
+    state.refineSelected.forEach(uid=>{
+      const idx = state.inventory.findIndex(it=>it.uid===uid);
+      if(idx>=0) state.inventory.splice(idx,1);
+    });
+    state.gold -= cost;
+    const rarity = rollRefineRarity(materials);
+    const newItem = createItem(state.refineType, rarity, Math.max(1, state.level*2));
+    addItemToInventory(newItem);
+    state.refineSelected = [];
+    updateHUD(); checkAchievements(); renderBag(); renderRefine(); renderEnhance();
+  }
+
+  function renderRefine(){
+    const typeBtnEl = $("refineTypeBtns"), listEl = $("refineMaterialList"), summaryEl = $("refineSummary");
+    if(!typeBtnEl || !listEl || !summaryEl) return;
+
+    state.refineSelected = state.refineSelected.filter(uid=>state.inventory.some(it=>it.uid===uid));
+    typeBtnEl.innerHTML = "";
+    Object.keys(ITEM_TYPES).forEach(type=>{
+      const btn = document.createElement("div");
+      btn.className = "refineTypeBtn" + (state.refineType===type ? " active" : "");
+      btn.textContent = ITEM_TYPES[type].label;
+      btn.addEventListener("click", ()=>setRefineType(type));
+      typeBtnEl.appendChild(btn);
+    });
+
+    listEl.innerHTML = "";
+    if(state.inventory.length===0){
+      listEl.innerHTML = `<div class="emptyHint">納戒是空的！</div>`;
+    } else {
+      state.inventory.forEach(item=>{
+        const selected = state.refineSelected.includes(item.uid);
+        const card = document.createElement("div");
+        card.className = "itemCard selectable" + (selected ? " selected" : "");
+        card.innerHTML = `<div class="itemInfo">${itemDescHTML(item)}</div><div class="itemActions">${selected ? "✅" : "⬜"}</div>`;
+        card.addEventListener("click", ()=>toggleRefineMaterial(item.uid));
+        listEl.appendChild(card);
+      });
+    }
+
+    const materials = getRefineMaterials();
+    const btn = $("btnDoRefine");
+    if(materials.length === REFINE_MATERIAL_COUNT){
+      const cost = Math.max(10, Math.round(materials.reduce((s,it)=>s+it.price,0)*0.15));
+      const affordable = state.gold >= cost;
+      summaryEl.textContent = `已選材料：3/3｜目標：${ITEM_TYPES[state.refineType].label}｜花費：${cost} 金幣`;
+      btn.style.opacity = affordable ? "1" : "0.4";
+      btn.style.pointerEvents = affordable ? "auto" : "none";
+    } else {
+      summaryEl.textContent = `已選材料：${materials.length}/3｜還需選擇 ${3 - materials.length} 件材料`;
+      btn.style.opacity = "0.4";
+      btn.style.pointerEvents = "none";
+    }
+  }
+
+  function sellItem(uid){
+    const idx = state.inventory.findIndex(i=>i.uid===uid);
+    if(idx<0) return;
+    const item = state.inventory[idx];
+    state.inventory.splice(idx,1);
+    state.gold += Math.max(1, Math.round(item.price*0.5));
+    updateHUD(); renderBag(); renderRefine();
+  }
+
+  function buyItem(shopId){
+    const item = SHOP_STOCK.find(i=>i.uid===shopId);
+    if(!item || state.gold < item.price) return;
+    state.gold -= item.price;
+    addItemToInventory(Object.assign({}, item, {uid:"it"+(itemUID++)}));
+    updateHUD(); renderBag(); renderShop(); renderRefine();
+  }
+
+  let SHOP_STOCK = [];
+  function generateShopStock(){
+    SHOP_STOCK = [];
+    Object.keys(ITEM_TYPES).forEach(type=>{
+      ["common","rare","epic"].forEach(rarity=>{
+        SHOP_STOCK.push(createItem(type, rarity, Math.max(1, state.level*2)));
+      });
+    });
+  }
+
+  function renderShop(){
+    const el = $("shopList");
+    if(!el) return;
+    el.innerHTML = "";
+    SHOP_STOCK.forEach(item=>{
+      const card = document.createElement("div");
+      card.className = "itemCard";
+      card.innerHTML = `<div class="itemInfo">${itemDescHTML(item)}<br>價格：${item.price} 金幣</div>
+        <div class="itemActions"><button class="miniBtn" ${state.gold >= item.price?"":"disabled"} data-buy="${item.uid}">購買</button></div>`;
+      el.appendChild(card);
+    });
+    el.querySelectorAll("[data-buy]").forEach(btn=>{
+      btn.addEventListener("click", ()=>buyItem(btn.getAttribute("data-buy")));
+    });
+  }
+
+  function renderBag(){
+    const el = $("bagList");
+    if(!el) return;
+    el.innerHTML = "";
+    if(state.inventory.length===0){ el.innerHTML = `<div class="emptyHint">納戒是空的！</div>`; return; }
+    state.inventory.forEach(item=>{
+      const card = document.createElement("div");
+      card.className = "itemCard";
+      card.innerHTML = `<div class="itemInfo">${itemDescHTML(item)}</div>
+        <div class="itemActions">
+          <button class="miniBtn" data-equip="${item.uid}">裝備</button>
+          <button class="miniBtn sell" data-sell="${item.uid}">賣出(${Math.max(1, Math.round(item.price*0.5))})</button>
+        </div>`;
+      el.appendChild(card);
+    });
+    el.querySelectorAll("[data-equip]").forEach(btn=>btn.addEventListener("click", ()=>equipItem(btn.getAttribute("data-equip"))));
+    el.querySelectorAll("[data-sell]").forEach(btn=>btn.addEventListener("click", ()=>sellItem(btn.getAttribute("data-sell"))));
+  }
+
+  function renderEquip(){
+    [["weapon","slotWeapon","武器"],["armor","slotArmor","護甲"],["accessory","slotAccessory","飾品"],["companion","slotCompanion","傀儡/魔寵"]].forEach(([slot,domId,label])=>{
+      const el = $(domId); if(!el) return;
+      const item = state.equip[slot];
+      if(!item){ el.innerHTML = `<span class="slotName">${label}</span>（空）`; }
+      else {
+        el.innerHTML = `<span class="slotName">${label}</span><span class="${RARITY[item.rarity].cls}">${item.name}</span>${elementBadgeHTML(item.element)}<br>+${item.value} ${statLabel(item.stat)}
+          <div style="margin-top:4px;"><button class="miniBtn unequip" data-unequip="${slot}">卸下</button></div>`;
+      }
+    });
+    document.querySelectorAll("[data-unequip]").forEach(btn=>btn.addEventListener("click", ()=>unequipItem(btn.getAttribute("data-unequip"))));
+  }
+
+  function openCamp(){
+    if(state.inBattle) return;
+    generateShopStock(); renderShop(); renderBag(); renderEquip(); renderEnhance(); renderRefine(); renderAchievements(); renderCartography();
+    campOverlay.classList.remove("hidden");
+  }
+
+  function closeCamp(){ campOverlay.classList.add("hidden"); }
+
+  // ---------- save / load (local JSON file) ----------
+  function buildSaveObject(){
+    return {
+      version:1,
+      savedAt: new Date().toISOString(),
+      state: {
+        distance:state.distance, level:state.level, exp:state.exp, expToNext:state.expToNext,
+        hp:state.hp, baseMaxHp:state.baseMaxHp, baseAtk:state.baseAtk, baseDef:state.baseDef,
+        mp:state.mp, baseMaxMp:state.baseMaxMp,
+        gold:state.gold, inventory:state.inventory, equip:state.equip, stage:state.stage,
+        maxMonsterTier:state.maxMonsterTier,
+        winStreak:state.winStreak, kills:state.kills, totalGoldEarned:state.totalGoldEarned,
+        achievementsUnlocked:state.achievementsUnlocked, lastBossStage:state.lastBossStage,
+        mapX:state.mapX, mapY:state.mapY, mapHeading:state.mapHeading,
+        mapPath:state.mapPath, mapMarkers:state.mapMarkers,
+        lastMapDrawPathLen:state.lastMapDrawPathLen, lastMapDrawMarkerIdx:state.lastMapDrawMarkerIdx,
+        bgSceneIndex:bgSceneIndex,
+      },
+      shopStock: SHOP_STOCK,
+    };
+  }
+
+  function exportSave(){
+    const data = buildSaveObject();
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `doupo-journey-save-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  }
+
+  function applySaveObject(data){
+    if(!data || !data.state) { alert("存檔格式不正確"); return; }
+    const s = data.state;
+    state.distance = s.distance||0;
+    state.stage = (typeof s.stage === "number") ? s.stage : Math.floor(state.distance / STEPS_PER_STAGE);
+    state.level = s.level||1;
+    state.exp = s.exp||0;
+    state.expToNext = s.expToNext||20;
+    state.baseMaxHp = s.baseMaxHp||30;
+    state.baseAtk = s.baseAtk||6;
+    state.baseDef = s.baseDef||2;
+    state.baseMaxMp = (typeof s.baseMaxMp==="number") ? s.baseMaxMp : 20;
+    state.gold = (typeof s.gold==="number") ? s.gold : 20;
+    state.inventory = Array.isArray(s.inventory) ? s.inventory : [];
+    state.equip = s.equip || {weapon:null,armor:null,accessory:null,companion:null};
+    if(!state.equip.companion) state.equip.companion = null;
+    state.hp = (typeof s.hp==="number") ? s.hp : state.baseMaxHp;
+    state.mp = (typeof s.mp==="number") ? s.mp : state.baseMaxMp;
+    state.maxMonsterTier = (typeof s.maxMonsterTier==="number") ? s.maxMonsterTier : 1;
+    state.winStreak = (typeof s.winStreak==="number") ? s.winStreak : 0;
+    state.kills = (typeof s.kills==="number") ? s.kills : 0;
+    state.totalGoldEarned = (typeof s.totalGoldEarned==="number") ? s.totalGoldEarned : 0;
+    state.achievementsUnlocked = Array.isArray(s.achievementsUnlocked) ? s.achievementsUnlocked : [];
+    state.lastBossStage = (typeof s.lastBossStage==="number") ? s.lastBossStage : 0;
+    state.pendingBoss = false;
+    state.inBattle = false;
+    state.mapX = (typeof s.mapX==="number") ? s.mapX : 0;
+    state.mapY = (typeof s.mapY==="number") ? s.mapY : 0;
+    state.mapHeading = (typeof s.mapHeading==="number") ? s.mapHeading : 0;
+    state.mapPath = Array.isArray(s.mapPath) && s.mapPath.length ? s.mapPath : [{x:state.mapX,y:state.mapY}];
+    state.mapMarkers = Array.isArray(s.mapMarkers) ? s.mapMarkers : [];
+    state.lastMapDrawPathLen = (typeof s.lastMapDrawPathLen==="number") ? s.lastMapDrawPathLen : 1;
+    state.lastMapDrawMarkerIdx = (typeof s.lastMapDrawMarkerIdx==="number") ? s.lastMapDrawMarkerIdx : 0;
+    bgSceneIndex = (typeof s.bgSceneIndex==="number") ? Math.min(bgPositions.length-1, Math.max(0, s.bgSceneIndex)) : 0;
+    SHOP_STOCK = Array.isArray(data.shopStock) && data.shopStock.length ? data.shopStock : [];
+    recomputeStats();
+    state.hp = Math.min(state.hp, state.maxHp);
+    state.mp = Math.min(state.mp, state.maxMp);
+    updateHUD();
+    titleOverlay.classList.add("hidden");
+    gameOverOverlay.classList.add("hidden");
+    battleOverlay.classList.add("hidden");
+    resultOverlay.classList.add("hidden");
+    state.started = true;
+    renderShop(); renderBag(); renderEquip(); renderEnhance(); renderRefine(); renderAchievements(); renderCartography();
+    renderMinimap();
+    updateSceneBg();
+  }
+
+  function importSaveFromFile(file){
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{
+        const data = JSON.parse(e.target.result);
+        applySaveObject(data);
+      }catch(err){
+        alert("讀取存檔失敗：" + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ==================== GOOGLE DRIVE ====================
+  const CLIENT_ID = '375971288943-097rhbub5h2d06f1g5lqs60in6pofj22.apps.googleusercontent.com';
+  const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+  const DRIVE_SAVE_FILENAME = 'doupo-journey-save.json';
+  const DRIVE_FILE_ID_KEY = 'doupoJourneyDriveFileId'; // remembers which Drive file is "the" save, once found/created
+
+  let driveTokenClient = null;
+  let driveAccessToken = null;
+
+  function ensureDriveTokenClient(){
+    if(driveTokenClient) return true;
+    if(!window.google || !window.google.accounts || !window.google.accounts.oauth2) return false;
+    driveTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: ()=>{}, // overridden per-request below
+    });
+    return true;
+  }
+
+  // requests (or silently reuses) an access token, then runs onGranted()
+  function withDriveToken(onGranted){
+    if(!ensureDriveTokenClient()){
+      alert("Google 登入元件尚未載入完成，請確認網路連線後再試一次。");
+      return;
+    }
+    driveTokenClient.callback = (resp)=>{
+      if(resp.error){
+        alert("Google 授權失敗：" + resp.error);
+        return;
+      }
+      driveAccessToken = resp.access_token;
+      onGranted();
+    };
+    driveTokenClient.requestAccessToken({ prompt: driveAccessToken ? "" : "consent" });
+  }
+
+  // finds the id of "the" save file in Drive — remembered locally, or looked up by filename
+  async function driveFindSaveFileId(){
+    const remembered = localStorage.getItem(DRIVE_FILE_ID_KEY);
+    if(remembered) return remembered;
+    const q = encodeURIComponent(`name='${DRIVE_SAVE_FILENAME}' and trashed=false`);
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&spaces=drive`, {
+      headers: { Authorization: `Bearer ${driveAccessToken}` },
+    });
+    if(!res.ok) throw new Error(`搜尋雲端存檔失敗 (HTTP ${res.status})`);
+    const data = await res.json();
+    if(data.files && data.files.length){
+      localStorage.setItem(DRIVE_FILE_ID_KEY, data.files[0].id);
+      return data.files[0].id;
+    }
+    return null;
+  }
+
+  async function driveDoExport(){
+    try{
+      const json = JSON.stringify(buildSaveObject());
+      const fileId = await driveFindSaveFileId();
+      if(fileId){
+        // file already exists — just overwrite its content
+        const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${driveAccessToken}`, "Content-Type": "application/json" },
+          body: json,
+        });
+        if(!res.ok) throw new Error(`更新雲端存檔失敗 (HTTP ${res.status})`);
+      } else {
+        // no existing file — create a new one via multipart upload
+        const boundary = "doupoJourneySave" + Date.now();
+        const metadata = { name: DRIVE_SAVE_FILENAME, mimeType: "application/json" };
+        const body =
+          `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+          `--${boundary}\r\nContent-Type: application/json\r\n\r\n${json}\r\n` +
+          `--${boundary}--`;
+        const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${driveAccessToken}`, "Content-Type": `multipart/related; boundary=${boundary}` },
+          body,
+        });
+        if(!res.ok) throw new Error(`建立雲端存檔失敗 (HTTP ${res.status})`);
+        const created = await res.json();
+        localStorage.setItem(DRIVE_FILE_ID_KEY, created.id);
+      }
+      alert("已成功將存檔同步到 Google 雲端硬碟！");
+    }catch(err){
+      alert("匯出到雲端硬碟時發生錯誤：" + err.message);
+    }
+  }
+
+  async function driveDoImport(){
+    try{
+      const fileId = await driveFindSaveFileId();
+      if(!fileId){
+        alert("在你的 Google 雲端硬碟中找不到蕭炎的存檔，請先使用「匯出到雲端硬碟」建立一份。");
+        return;
+      }
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        headers: { Authorization: `Bearer ${driveAccessToken}` },
+      });
+      if(!res.ok) throw new Error(`讀取雲端存檔失敗 (HTTP ${res.status})`);
+      const data = await res.json();
+      applySaveObject(data);
+      alert("已成功從 Google 雲端硬碟載入存檔！");
+    }catch(err){
+      alert("從雲端硬碟匯入時發生錯誤：" + err.message);
+    }
+  }
+
+  function driveExportSave(){ withDriveToken(driveDoExport); }
+  function driveImportSave(){ withDriveToken(driveDoImport); }
+
+  const $ = (id)=>document.getElementById(id);
+  const hpFill = $("hpFill"), expFill = $("expFill"), mpFill = $("mpFill");
+  const pLevel = $("pLevel"), distVal = $("distVal"), stageVal = $("stageVal"), goldVal = $("goldVal");
+  const titleOverlay = $("titleOverlay"), battleOverlay = $("battleOverlay"), resultOverlay = $("resultOverlay"), gameOverOverlay = $("gameOverOverlay");
+  const battleLog = $("battleLog"), enemyName = $("enemyName"), battleHpFillP = $("battleHpFillP"), battleHpFillE = $("battleHpFillE");
+  const campOverlay = $("campOverlay"), dropBox = $("dropBox");
+
+  function updateHUD(){
+    hpFill.style.width = Math.max(0,(state.hp/state.maxHp*100))+"%";
+    mpFill.style.width = Math.max(0,(state.mp/state.maxMp*100))+"%";
+    expFill.style.width = Math.max(0,(state.exp/state.expToNext*100))+"%";
+    pLevel.textContent = state.level;
+    distVal.textContent = state.distance;
+    if(stageVal) stageVal.textContent = state.stage;
+    if(goldVal) goldVal.textContent = state.gold;
+    const elemEl = $("pElemBadges");
+    if(elemEl){
+      const wEl = playerElement(), aEl = playerDefenseElement();
+      elemEl.innerHTML = (wEl?elementBadgeHTML(wEl):"") + (aEl?elementBadgeHTML(aEl):"");
+    }
+  }
+
+  function logMsg(msg){ battleLog.textContent = msg; }
+
+  let toastTimer = null;
+  function showToast(msg, duration){
+    const el = $("toastMsg"); if(!el) return;
+    el.textContent = msg; el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>el.classList.remove("show"), duration || 3200);
+  }
+
+  function nudgeTurn(dir){
+    state.mapHeading = (state.mapHeading + dir*45 + 360) % 360;
+    renderMinimap();
+  }
+
+  function advanceMapPosition(){
+    const rad = state.mapHeading * Math.PI/180;
+    state.mapX += Math.sin(rad) * 8;
+    state.mapY -= Math.cos(rad) * 8;
+    state.mapPath.push({x:state.mapX, y:state.mapY});
+    renderMinimap();
+  }
+
+  function addMapMarker(type, label){
+    state.mapMarkers.push({x:state.mapX, y:state.mapY, type, label});
+    renderMinimap();
+  }
+
+  function renderMinimap(){
+    const svg = $("minimapSvg"); if(!svg || !state.mapPath.length) return;
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    state.mapPath.forEach(p=>{ minX=Math.min(minX,p.x); maxX=Math.max(maxX,p.x); minY=Math.min(minY,p.y); maxY=Math.max(maxY,p.y); });
+    const VB = 120, PAD = 12;
+    const scale = Math.min((VB-2*PAD)/Math.max(1, maxX-minX), (VB-2*PAD)/Math.max(1, maxY-minY));
+    const pathPts = state.mapPath.map(p=>`${(PAD + (p.x-minX)*scale).toFixed(1)},${(PAD + (p.y-minY)*scale).toFixed(1)}`).join(" ");
+    svg.innerHTML = `<polyline points="${pathPts}" fill="none" stroke="#8a6b4b" stroke-width="2"/>`;
+  }
+
+  function renderCartography(){
+    const statsEl = $("cartographyStats");
+    if(statsEl) statsEl.innerHTML = `已記錄軌跡數：${state.mapPath.length} 步`;
+  }
+
+  function sellDrawnMap(){
+    const val = Math.round(state.mapPath.length * 1.2);
+    state.gold += val;
+    updateHUD(); showToast(`🗺️ 賣出地圖獲得 ${val} 金幣！`, 3000);
+  }
+
+  function pickMonster(){
+    const pool = MONSTER_TABLE.filter(m=>state.distance>=m.minDist);
+    const base = pool[pool.length-1] || MONSTER_TABLE[0];
+    return Object.assign({}, base, {curHp:base.hp});
+  }
+
+  function pickBossMonster(){
+    const base = pickMonster();
+    return Object.assign({}, base, {
+      name: base.name + "（霸主）", hp: base.hp*3, curHp: base.hp*3, atk: Math.round(base.atk*1.8), isBoss: true
+    });
+  }
+
+  function goForward(){
+    if(state.inBattle || bgSceneIndex === 2) return;
+    state.distance++;
+    advanceMapPosition();
+    updateHUD();
+    if(Math.random() < 0.35){ setTimeout(()=>startBattle(false), 220); }
+  }
+
+  function startBattle(isBoss){
+    currentMonster = isBoss ? pickBossMonster() : pickMonster();
+    state.inBattle = true;
+    enemyName.innerHTML = currentMonster.name + elementBadgeHTML(currentMonster.element);
+
+    /* 重設並套用對應的 CSS 精靈圖 Class */
+    const enemySpriteEl = $("enemySprite");
+    if (enemySpriteEl) {
+      enemySpriteEl.className = "character-sprite " + currentMonster.spriteClass;
+    }
+
+    battleHpFillP.style.width = "100%";
+    battleHpFillE.style.width = "100%";
+    logMsg(currentMonster.isBoss ? `⚔️ 霸主 ${currentMonster.name} 出現！` : `${currentMonster.name} 擋住了去路！`);
+    addMapMarker(currentMonster.isBoss ? "boss" : "monster", currentMonster.name);
+    battleOverlay.classList.remove("hidden");
+  }
+
+  function endBattleWin(){
+    const m = currentMonster;
+    state.kills++;
+    state.exp += m.exp;
+    state.gold += Math.round(5 + m.tier*2);
+    let droppedItem = generateDrop(m.tier);
+    addItemToInventory(droppedItem);
+    updateHUD(); checkAchievements();
+    battleOverlay.classList.add("hidden");
+    $("resultTitle").textContent = "勝利！";
+    $("resultText").textContent = `擊敗了 ${m.name}！`;
+    if(droppedItem){
+      dropBox.innerHTML = `🎁 繳獲裝備：${itemDescHTML(droppedItem)}`;
+      dropBox.classList.add("show");
+    }
+    resultOverlay.classList.remove("hidden");
+    state.inBattle = false;
+  }
+
+  function monsterTurn(){
+    if(!currentMonster || currentMonster.curHp <= 0) return;
+    const dmg = Math.max(1, currentMonster.atk - state.def);
+    state.hp = Math.max(0, state.hp - dmg);
+    updateHUD();
+    logMsg(`${currentMonster.name} 對你造成了 ${dmg} 點傷害！`);
+    if(state.hp <= 0){
+      setTimeout(()=>{ battleOverlay.classList.add("hidden"); gameOverOverlay.classList.remove("hidden"); state.inBattle = false; }, 500);
+    }
+  }
+
+  function playerAttack(){
+    if(!currentMonster) return;
+    const dmg = Math.max(1, state.atk - currentMonster.def);
+    currentMonster.curHp = Math.max(0, currentMonster.curHp - dmg);
+    battleHpFillE.style.width = Math.max(0, (currentMonster.curHp / currentMonster.hp * 100)) + "%";
+    logMsg(`你對 ${currentMonster.name} 造成 ${dmg} 點傷害！`);
+    if(currentMonster.curHp <= 0){ setTimeout(endBattleWin, 400); }
+    else { setTimeout(monsterTurn, 600); }
+  }
+
+  let currentMonster = null;
+
+  document.addEventListener("DOMContentLoaded", ()=>{
+    $("btnStart").addEventListener("click", ()=>{ titleOverlay.classList.add("hidden"); state.started = true; updateHUD(); renderMinimap(); });
+    $("btnForward").addEventListener("click", goForward);
+    $("btnLeft").addEventListener("click", ()=>nudgeTurn(-1));
+    $("btnRight").addEventListener("click", ()=>nudgeTurn(1));
+    $("btnCamp").addEventListener("click", openCamp);
+    $("btnLeaveCamp").addEventListener("click", closeCamp);
+    $("btnContinue").addEventListener("click", ()=>resultOverlay.classList.add("hidden"));
+    $("btnRestart").addEventListener("click", ()=>{ state.hp = state.maxHp; updateHUD(); gameOverOverlay.classList.add("hidden"); });
+    $("btnAttack").addEventListener("click", playerAttack);
+    $("btnFlee").addEventListener("click", ()=>{ battleOverlay.classList.add("hidden"); state.inBattle = false; });
+    
+    document.querySelectorAll(".campTab").forEach(tab=>{
+      tab.addEventListener("click", ()=>{
+        document.querySelectorAll(".campTab").forEach(t=>t.classList.remove("active"));
+        document.querySelectorAll(".campPane").forEach(p=>p.classList.remove("active"));
+        tab.classList.add("active");
+        const pane = $("pane" + tab.getAttribute("data-tab").charAt(0).toUpperCase() + tab.getAttribute("data-tab").slice(1));
+        if(pane) pane.classList.add("active");
+      });
+    });
+
+    $("btnSellMap").addEventListener("click", sellDrawnMap);
+    $("btnDoRefine").addEventListener("click", doRefine);
+
+    // ---------- save / load events ----------
+    const importFileInput = $("importFileInput");
+    $("btnExportTitle").addEventListener("click", exportSave);
+    $("btnExportCamp").addEventListener("click", exportSave);
+    $("btnImportTitle").addEventListener("click", ()=>importFileInput.click());
+    $("btnImportCamp").addEventListener("click", ()=>importFileInput.click());
+    $("btnDriveExportTitle").addEventListener("click", driveExportSave);
+    $("btnDriveExportCamp").addEventListener("click", driveExportSave);
+    $("btnDriveImportTitle").addEventListener("click", driveImportSave);
+    $("btnDriveImportCamp").addEventListener("click", driveImportSave);
+    importFileInput.addEventListener("change", (e)=>{
+      const file = e.target.files && e.target.files[0];
+      importSaveFromFile(file);
+      importFileInput.value = "";
+    });
+  });
+
+})();
+</script>
+</body>
+</html>
